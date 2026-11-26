@@ -1,0 +1,77 @@
+{
+  "format": 1,
+  "title": {
+    "en": "Feishu Workspace",
+    "zh": "飞书工作台"
+  },
+  "description": {
+    "en": "A Feishu (Lark) workbench view for DeepSeek Harness: connection status, quick notes into a wiki doc, drive & wiki browsing, file upload.",
+    "zh": "DeepSeek Harness 的飞书工作台视图：接入状态、速记直达知识库文档、云空间与知识库浏览、文件上传，都收在一张卡片里。"
+  },
+  "metadata": {
+    "categories": {
+      "productivity": {
+        "title": {
+          "en": "Productivity",
+          "zh": "效率工具"
+        }
+      }
+    },
+    "labels": {},
+    "sortKeys": {}
+  },
+  "plugins": [
+    {
+      "name": "dsh-feishu-view",
+      "title": {
+        "en": "Feishu Workspace",
+        "zh": "飞书工作台"
+      },
+      "description": {
+        "en": "See Feishu status at a glance, jot quick notes into your wiki notebook, browse wiki spaces and drive files, create docs and bases, upload attachments.",
+        "zh": "顶栏一键打开：看飞书接入状态、写速记自动进知识库速记本、浏览知识库与云空间、新建文档和多维表格、上传附件。"
+      },
+      "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CiAgPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMzMzcwZmYiLz4KICA8cGF0aCBkPSJNNTAgMTQgMjIuNSAyNy41Yy0xLjkuOS0xLjggMy42LjEgNC40bDcgMi45IDMuNCA3LjJjLjggMS44IDMuMyAxLjkgNC4zLjJMNTAgMTRaIiBmaWxsPSIjZmZmZmZmIi8+CiAgPHBhdGggZD0iTTUwIDE0IDI5LjYgMzQuOGwzLjQgNy4yTDUwIDE0WiIgZmlsbD0iI2I5Y2NmZiIvPgogIDxwYXRoIGQ9Ik0zNS40IDMyLjYgNTAgMTQgNDAuMiAzNi40Yy0uNiAxLjQtMi42IDEuNi0zLjYuNGwtMi44LTMuNGMtLjQtLjUuMS0xLjIuNy0xbC45LjJaIiBmaWxsPSIjZmZmZmZmIiBvcGFjaXR5PSIuNTUiLz4KPC9zdmc+Cg==",
+      "author": "hbycwzm001",
+      "homepage": "https://github.com/hbycwzm001/dsh-feishu-view",
+      "repository": {
+        "url": "https://github.com/hbycwzm001/dsh-feishu-view"
+      },
+      "metadata": {
+        "category": "productivity",
+        "keywords": [
+          "feishu",
+          "lark",
+          "飞书",
+          "wiki",
+          "知识库",
+          "quick-note",
+          "速记",
+          "drive",
+          "云文档",
+          "bitable",
+          "多维表格",
+          "productivity",
+          "效率",
+          "deepseek"
+        ],
+        "labels": [],
+        "sortKeys": {}
+      },
+      "versions": [
+        {
+          "version": "0.1.1",
+          "publishTimestamp": 1795672249,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/hbycwzm001/dsh-feishu-view",
+            "commit": "d6b4e3e3705a0c81ddfdb394365c8edc0539e3cd"
+          },
+          "engines": {
+            "dsh": ">=0.2.2-rc.1 <0.3.0"
+          }
+        }
+      ]
+    }
+  ]
+}
