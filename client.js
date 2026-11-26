@@ -31,6 +31,7 @@ window.__ModuleLoader__.load({
       open: '打开',
       bitable: '多维表格',
       doc: '文档',
+      docx: '文档',
       sheet: '电子表格',
       mindnote: '思维笔记',
       folder: '文件夹',
@@ -123,6 +124,7 @@ window.__ModuleLoader__.load({
       open: 'Open',
       bitable: 'Base',
       doc: 'Doc',
+      docx: 'Doc',
       sheet: 'Sheet',
       mindnote: 'Mindnote',
       folder: 'Folder',
@@ -1123,7 +1125,7 @@ window.__ModuleLoader__.load({
             h(Card, { title: t('intel'), icon: '▤', count: intelItems.length,
               more: intelItems.length > INTEL_PREVIEW
                 ? h('span', { className: 'fsv-more', onClick: () => setShowAllIntel(!showAllIntel) },
-                  `${showAllIntel ? t('collapse') : t('seeAll')} ›`)
+                  `${showAllIntel ? t('collapse') : t('viewAll')} ›`)
                 : null },
               intelItems.length
                 ? (showAllIntel ? intelItems : intelItems.slice(0, INTEL_PREVIEW)).map((it, i) => h('div', {

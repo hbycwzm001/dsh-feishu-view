@@ -1,4 +1,5 @@
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 
@@ -83,7 +84,8 @@ function readJson(path, fallback) {
 
 function writeJson(path, value) {
   mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+  // settings / snapshot 里有文档 token 与云空间清单,新文件按 0600 落盘(已存在的文件权限不变)
+  writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`, { encoding: 'utf8', mode: 0o600 });
 }
 
 function readSettings() {
@@ -109,7 +111,7 @@ function readStatus() {
   return {
     configured: Boolean(appId && appSecret),
     appIdTail: appId ? appId.slice(-6) : '',
-    domain: typeof cfg.domain === 'string' && cfg.domain ? cfg.domain : 'https://open.feishu.cn',
+    domain: typeof cfg.domain === 'string' && cfg.domain ? cfg.domain.replace(/\/+$/, '') : 'https://open.feishu.cn',
     hasUserToken: Boolean(cfg.userAccessToken),
     settings: readSettings(),
   };
@@ -117,25 +119,28 @@ function readStatus() {
 
 /** 写开关:主机侧持久化到 <DSH_HOME>/feishu-view/settings.json。 */
 function writeShowTab(value, patch = {}) {
-  const current = readSettings();
+  // 必须以原始文件的全量内容为底合并:readSettings() 只挑已知字段,
+  // 拿它回写会把 attachFolder 等未建模字段直接抹掉。
+  const raw = readJson(settingsFile(), {}) || {};
   const str = (v) => (typeof v === 'string' ? v.trim() : '');
-  const next = { ...current, showTab: typeof value === 'boolean' ? value : current.showTab };
+  const next = { ...raw };
+  if (typeof value === 'boolean') next.showTab = value;
   if (typeof patch.kbSpaceId === 'string') next.kbSpaceId = str(patch.kbSpaceId);
   if (typeof patch.intelDir === 'string') next.intelDir = str(patch.intelDir);
   writeJson(settingsFile(), next);
   return {
-    showTab: next.showTab,
+    showTab: next.showTab === true,
     note: next.note || null,
-    kbSpaceId: next.kbSpaceId || '',
-    intelDir: next.intelDir || '',
+    kbSpaceId: str(next.kbSpaceId),
+    intelDir: str(next.intelDir),
   };
 }
 
 function writeNote(note) {
-  const current = readSettings();
-  const next = { ...current, note: note || null };
+  const raw = readJson(settingsFile(), {}) || {};
+  const next = { ...raw, note: note || null };
   writeJson(settingsFile(), next);
-  return { showTab: next.showTab, note: next.note };
+  return { showTab: next.showTab === true, note: next.note };
 }
 
 function patchSettings(patch) {
@@ -239,7 +244,8 @@ async function loadInventory({ force = false, fast = false } = {}) {
     return { ok: false, needAuth: true, error: '还没有用户身份令牌,需要先完成一次飞书授权。' };
   }
 
-  const key = `${domain}|${token.slice(-12)}`;
+  // 缓存键只用令牌的哈希前缀,不把令牌尾巴明文写进磁盘快照文件
+  const key = `${domain}|${createHash('sha256').update(token).digest('hex').slice(0, 16)}`;
   if (!force && cache.data && cache.key === key && Date.now() - cache.ts < CACHE_TTL_MS) {
     return { ...cache.data, cached: true };
   }
@@ -264,7 +270,15 @@ async function loadInventory({ force = false, fast = false } = {}) {
     if (visited.has(folderToken) || visited.size >= 40 || items.length >= 600) return;
     visited.add(folderToken);
 
-    const { files, error } = await listFolder(domain, token, folderToken);
+    let files;
+    let error;
+    try {
+      ({ files, error } = await listFolder(domain, token, folderToken));
+    } catch (err) {
+      // 网络/超时:listFolder 内部不兜底,以前根目录一超时整个清单就全灭,这里降级为一条错误记录
+      errors.push({ path: parentPath || '根目录', code: 'network', msg: String((err && err.message) || err) });
+      return;
+    }
     if (error) {
       if (error.code === 99991679 || error.code === 99991663) {
         needAuth = String(error.code);
@@ -575,7 +589,8 @@ async function apiJson(url, token, { method = 'POST', body = null } = {}) {
 function writeCtx() {
   const cfg = readConfig();
   const token = typeof cfg.userAccessToken === 'string' ? cfg.userAccessToken : '';
-  const domain = typeof cfg.domain === 'string' && cfg.domain ? cfg.domain : 'https://open.feishu.cn';
+  // 与 loadInventory 一致地去掉尾部斜杠,否则配置带 / 结尾时所有写接口 URL 都会变成双斜杠
+  const domain = typeof cfg.domain === 'string' && cfg.domain ? cfg.domain.replace(/\/+$/, '') : 'https://open.feishu.cn';
   if (!token) return { error: '还没有配置飞书用户令牌,请先在小卡片里点「去授权」' };
   return { token, domain, note: readSettings().note };
 }
@@ -644,7 +659,8 @@ async function saveNote({ text = '', title = '' } = {}) {
   const ctx2 = await ensureNoteDoc();
   if (ctx2.error) return { ok: false, error: ctx2.error };
   const { token, domain, note } = ctx2;
-  const blocks = noteBlocks(title ? `**${title}**\n${body}` : body, stampNow());
+  // noteBlocks 不解析 markdown,标题直接拼明文(以前包 ** 会原样出现在文档里)
+  const blocks = noteBlocks(title ? `${title}\n${body}` : body, stampNow());
   const res = await apiJson(
     `${domain}/open-apis/docx/v1/documents/${note.docToken}/blocks/${note.docToken}/children?document_revision_id=-1`,
     token,
@@ -691,6 +707,10 @@ async function ensureAttachFolder(domain, token) {
 async function uploadNoteFile({ name = '', data = '' } = {}) {
   const c = writeCtx();
   if (c.error) return { ok: false, error: c.error };
+  // 先按 base64 长度估算大小再解码,避免超大 payload 整段解码进内存后才被上限拦下
+  if (String(data || '').length > Math.ceil(MAX_UPLOAD * 4 / 3) + 8) {
+    return { ok: false, error: '单个文件上限 20MB' };
+  }
   const buf = Buffer.from(String(data || ''), 'base64');
   if (!buf.length) return { ok: false, error: '文件是空的' };
   if (buf.length > MAX_UPLOAD) return { ok: false, error: '单个文件上限 20MB' };
@@ -836,7 +856,9 @@ const json = (value) => Response.json(value, { headers: { 'cache-control': 'no-s
 
 function reply(result) {
   if (result && typeof result === 'object' && result.ok === false && result.error) {
-    return json({ ok: false, error: { code: 'feishu-view/failed', message: String(result.error) }, ...result });
+    // 先展开 result 再写 error:反过来会被 result.error(字符串)盖掉结构化的 { code, message },
+    // 客户端只能拿到 "HTTP 200",真实报错信息全丢。
+    return json({ ...result, ok: false, error: { code: 'feishu-view/failed', message: String(result.error) } });
   }
   return json({ ok: true, value: result });
 }

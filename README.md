@@ -68,6 +68,12 @@
 
 响应统一为 `{ ok: true, value }` 或 `{ ok: false, error: { code, message } }`。另有兼容入口 `GET /api/feishu-view/status`、`GET /api/feishu-view/inventory`、`POST /api/feishu-view/settings`。
 
+## 安全提示
+
+- 上面的 HTTP 接口**没有单独鉴权**，靠的是 DSH web 服务本身的访问控制。这些接口能以你的飞书身份读云空间、写文档、上传文件，**只适合本机使用，不要把 DSH 的 web 服务端口暴露到局域网或公网**。
+- 飞书凭据在 `~/.dsh/dsh-feishu.json` 里是明文（App Secret、用户令牌），这是与 `dsh-feishu-mcp` 共用一份的既定格式，本插件只读不写；请确保该文件不要被同步盘、备份工具或截图带出去。插件自身的设置与清单快照在 `~/.dsh/feishu-view/`，新建文件按 0600 权限落盘。
+- 用户令牌（`userAccessToken`）过期由 `dsh-feishu-mcp` 的授权流程负责刷新写回，本插件不持有刷新逻辑；面板提示「需要重新授权」时，去对话里重新走一次飞书授权即可。
+
 ## 关于 MCP 连接
 
 本插件直接调飞书 OpenAPI，不经过 MCP。如果你同时使用 `dsh-feishu-mcp`（把飞书 API 暴露成模型可调用的 `mcp__feishu__*` 工具），那个插件的已知问题是：每次连接都跑 `npx -y @larksuiteoapi/lark-mcp`，冷启动要 11 秒且依赖 npm registry，失败累计 10 次后永久放弃重连。改成优先用本地 lark-mcp CLI 后可以稳定在 1.3 秒左右，重连也不再封顶。补丁没有放进本仓库（那是第三方 MIT 项目），只在这里记一笔，方便日后对齐。
